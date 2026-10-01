@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#080D14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="看见">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>看见 · 火与水</title>
+<style>
+  :root{
+    --bg:#080D14; --panel:#101A26; --line:#22303F;
+    --text:#E7EEF6; --dim:#8795A8; --warn:#FF8A7A;
+    --accent:#FFC93C; --accent2:#F2761B;
+    --safe-t:env(safe-area-inset-top,0px);
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  body.water{--accent:#7FD8F0;--accent2:#3E8ED0}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+  body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+    font-size:16px;line-height:1.6}
+  button{font-family:inherit;color:inherit}
+  .serif{font-family:Georgia,"Songti SC","SimSun",serif}
+
+  .view{position:fixed;inset:0;display:flex;flex-direction:column;
+    padding-top:var(--safe-t);padding-bottom:var(--safe-b);
+    transition:transform .34s cubic-bezier(.16,.84,.34,1)}
+  #home{z-index:1}
+  #deck{z-index:2;transform:translateX(100%);background:var(--bg)}
+  #deck.open{transform:translateX(0)}
+
+  /* ---------- home ---------- */
+  .hero{padding:26px 22px 14px}
+  .hero h1{font-family:Georgia,"Songti SC",serif;font-weight:400;font-size:28px;margin:0 0 6px}
+  .hero p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.7}
+  .tiles{flex:1;display:flex;flex-direction:column;gap:14px;padding:14px 18px 22px;overflow-y:auto}
+  .tile{flex:1;min-height:150px;border:0;border-radius:18px;position:relative;overflow:hidden;
+    text-align:left;padding:20px;cursor:pointer;display:flex;flex-direction:column;justify-content:flex-end}
+  .tile .big{font-family:Georgia,"Songti SC",serif;font-size:42px;line-height:1;margin-bottom:6px}
+  .tile .sm{font-size:12.5px;opacity:.85}
+  .t-fire{background:radial-gradient(90% 100% at 50% 110%,rgba(242,118,27,.48),rgba(242,118,27,0) 72%),#17110C;
+    color:#FFE2B8}
+  .t-water{background:radial-gradient(90% 100% at 50% 110%,rgba(62,142,208,.45),rgba(62,142,208,0) 72%),#0C1620;
+    color:#CDEBF6}
+  .tile .deco{position:absolute;right:16px;top:14px;opacity:.5}
+  .homefoot{padding:0 20px 18px;font-size:11.5px;color:#5E6A7E;line-height:1.6}
+
+  /* ---------- deck chrome ---------- */
+  .dbar{flex:0 0 52px;display:flex;align-items:center;gap:12px;padding:0 14px;
+    border-bottom:1px solid var(--line)}
+  .dbar .t{font-family:Georgia,"Songti SC",serif;font-size:18px}
+  .dbar .c{font-size:12px;color:var(--dim)}
+  .back{margin-left:auto;background:none;border:0;font-size:15px;color:var(--dim);
+    padding:10px 6px;cursor:pointer}
+  .track{flex:1;display:flex;transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform}
+  .track.nt{transition:none}
+  .card{min-width:100%;padding:18px 18px 24px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .card h3{font-family:Georgia,"Songti SC",serif;font-weight:400;font-size:21px;margin:0 0 4px}
+  .card .sub{font-size:12.5px;color:var(--dim);margin:0 0 16px}
+  .card p{font-size:14.5px;line-height:1.85;color:#C8D3E0;margin:0 0 13px;
+    font-family:Georgia,"Songti SC",serif}
+  .card p.en{font-family:inherit;font-size:12.5px;color:#7B8798;line-height:1.65}
+  .dots{flex:0 0 52px;display:flex;align-items:center;justify-content:center;gap:8px;
+    border-top:1px solid var(--line);position:relative}
+  .dots i{width:7px;height:7px;border-radius:50%;background:#2F4057;display:block}
+  .dots i.on{background:var(--accent);width:18px;border-radius:4px}
+  .nav{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:0;
+    color:var(--accent);font-size:14px;padding:12px 8px;cursor:pointer}
+
+  /* shared widgets */
+  .why{border-left:2px solid var(--accent2);padding:8px 0 8px 12px;font-size:13.5px;line-height:1.8;
+    font-family:Georgia,"Songti SC",serif;color:#D4DEEA;margin-bottom:12px}
+  .toggle{display:flex;gap:8px;margin-bottom:13px}
+  .toggle button{flex:1;border:1px solid var(--line);background:var(--panel);border-radius:9px;
+    padding:11px 6px;font-size:13px;cursor:pointer}
+  .toggle button.on{border-color:var(--accent);color:var(--accent)}
+  .cases{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+  .cases button{border:1px solid var(--line);background:var(--panel);border-radius:10px;
+    padding:12px 9px;font-size:13.5px;cursor:pointer;font-family:Georgia,"Songti SC",serif;text-align:left}
+  .cases button.on{border-color:var(--accent);color:var(--accent)}
+  .fix{border:1px solid var(--line);border-radius:11px;padding:13px;background:var(--panel);
+    font-family:Georgia,"Songti SC",serif;font-size:13.5px;line-height:1.8;min-height:132px}
+  .fix .do{color:var(--accent)} .fix .dont{color:var(--warn);display:block;margin-top:8px}
+  .fix .tag{display:inline-block;margin-top:10px;font-family:-apple-system,sans-serif;font-size:11px;
+    color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+  .arc{position:relative;padding-left:21px;margin-bottom:14px}
+  .arc::before{content:"";position:absolute;left:5px;top:7px;bottom:14px;width:1px;background:var(--line)}
+  .step{position:relative;margin-bottom:16px}
+  .step::before{content:"";position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--accent)}
+  .step b{display:block;font-family:Georgia,"Songti SC",serif;font-size:14.5px;font-weight:400;margin-bottom:2px}
+  .step span{font-size:12.5px;color:var(--dim);line-height:1.65}
+  .aside{border:1px solid var(--line);border-radius:10px;padding:13px;font-size:13px;line-height:1.75;
+    color:#A9B5C6;background:var(--panel)}
+  .aside b{color:var(--text);font-family:Georgia,"Songti SC",serif;font-weight:400}
+
+  /* fire card 1 */
+  .minifire{height:104px;border-radius:11px;position:relative;margin-bottom:13px;overflow:hidden;
+    display:flex;align-items:flex-end;justify-content:center;transition:.35s;
+    background:radial-gradient(60% 70% at 50% 85%,rgba(242,118,27,.3),rgba(0,0,0,0) 70%),#0E131D}
+  .mf{width:38px;height:66px;margin-bottom:10px;border-radius:50% 50% 42% 42%/62% 62% 38% 38%;
+    background:linear-gradient(180deg,rgba(255,201,60,.92),rgba(242,118,27,.78));
+    animation:flick 1.8s ease-in-out infinite;transition:.35s}
+  @keyframes flick{0%,100%{transform:scaleX(1) scaleY(1)}33%{transform:scaleX(.9) scaleY(1.09)}
+    66%{transform:scaleX(1.07) scaleY(.93)}}
+  .minifire.dead{background:#0E131D} .minifire.dead .mf{height:7px;opacity:.25;animation:none}
+  .tri{display:flex;gap:9px;margin-bottom:14px}
+  .cond{flex:1;border:1px solid var(--line);border-radius:11px;padding:12px 6px;text-align:center;
+    background:var(--panel);cursor:pointer;transition:.2s}
+  .cond b{display:block;font-size:14px;margin-bottom:3px;font-family:Georgia,"Songti SC",serif;font-weight:400}
+  .cond em{font-style:normal;font-size:11px;color:var(--dim)}
+  .cond.off{opacity:.4;border-style:dashed}
+  .verdict{font-size:13.5px;line-height:1.8;color:var(--accent);min-height:52px;
+    font-family:Georgia,"Songti SC",serif;margin-bottom:12px}
+
+  /* fire card 2 */
+  .zones{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+  .candle{width:100px;flex:0 0 100px;height:140px;position:relative}
+  .zone{position:absolute;left:50%;transform:translateX(-50%);
+    border-radius:50% 50% 42% 42%/68% 68% 32% 32%;cursor:pointer}
+  .z-out{bottom:22px;width:62px;height:116px} .z-in{bottom:22px;width:38px;height:82px}
+  .z-core{bottom:24px;width:18px;height:32px}
+  .zone.sel{box-shadow:0 0 0 2px var(--accent)}
+  .wick{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:3px;height:16px;background:#2A2118}
+  .zinfo{flex:1;font-size:13.5px;line-height:1.8;font-family:Georgia,"Songti SC",serif;color:#C8D3E0}
+  .zinfo b{color:var(--accent);font-weight:400}
+
+  /* fire card 3 */
+  .spec{height:52px;border-radius:7px;position:relative;margin-bottom:12px;overflow:hidden;
+    background:linear-gradient(90deg,#3A0A6B 0%,#2020C8 14%,#00A0E0 30%,#00C853 46%,
+      #E8E800 63%,#FF8A00 78%,#D81B1B 100%)}
+  .spec .mask{position:absolute;inset:0;background:#05070B;opacity:0;transition:opacity .3s}
+  .spec .line{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 8px #fff;
+    opacity:0;transition:opacity .35s}
+  .spec .line.on{opacity:1}
+  .scale{display:flex;justify-content:space-between;font-size:10.5px;color:#66708A;margin:-6px 0 13px}
+  .elrow{display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+  .elrow button{flex:1;min-width:70px;border:1px solid var(--line);background:var(--panel);
+    border-radius:8px;padding:10px 6px;font-size:13px;cursor:pointer}
+  .elrow button.on{border-color:var(--accent);color:var(--accent)}
+
+  /* water card 1 */
+  #sim{width:100%;height:160px;display:block;border-radius:11px;background:#0C1620;margin-bottom:10px}
+  .slider{width:100%;margin:6px 0;accent-color:var(--accent);height:30px}
+  .treadout{display:flex;justify-content:space-between;font-size:12.5px;color:var(--dim);margin-bottom:13px}
+  .treadout b{color:var(--accent);font-size:16px;font-family:Georgia,serif;font-weight:400}
+
+  /* water card 2 */
+  .packs{display:flex;gap:10px;margin-bottom:13px}
+  .pack{flex:1;border:1px solid var(--line);border-radius:11px;padding:11px;background:var(--panel);
+    text-align:center;cursor:pointer}
+  .pack svg{display:block;margin:0 auto 6px}
+  .pack b{font-family:Georgia,"Songti SC",serif;font-weight:400;font-size:14px;display:block}
+  .pack em{font-style:normal;font-size:11.5px;color:var(--dim)}
+  .pack.hi{border-color:var(--accent)}
+
+  /* water card 3 */
+  .molbox{display:flex;gap:13px;align-items:center;margin-bottom:13px}
+  .molinfo{flex:1;font-size:13.5px;line-height:1.8;font-family:Georgia,"Songti SC",serif;color:#C8D3E0}
+
+  /* water card 6 */
+  .sources{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .sources button{flex:1;min-width:58px;border:1px solid var(--line);background:var(--panel);
+    border-radius:8px;padding:10px 3px;font-size:12.5px;cursor:pointer}
+  .sources button.on{border-color:var(--accent);color:var(--accent)}
+  .flow{position:relative;padding-left:21px;margin-bottom:13px}
+  .flow::before{content:"";position:absolute;left:5px;top:7px;bottom:12px;width:1px;background:var(--line)}
+  .stage2{position:relative;margin-bottom:10px;transition:opacity .25s}
+  .stage2::before{content:"";position:absolute;left:-20px;top:6px;width:10px;height:10px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--accent)}
+  .stage2.skip{opacity:.3} .stage2.skip::before{border-color:#3A4A5C}
+  .stage2 b{display:block;font-family:Georgia,"Songti SC",serif;font-size:14px;font-weight:400}
+  .stage2 span{font-size:12.5px;color:var(--dim);line-height:1.65}
+  .punch{border-left:2px solid var(--accent2);padding:8px 0 8px 12px;font-size:13.5px;line-height:1.8;
+    font-family:Georgia,"Songti SC",serif;color:#D4DEEA;margin-bottom:13px}
+
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<div class="view" id="home">
+  <div class="hero">
+    <h1>看见</h1>
+    <p>把身边的东西，和课本上的道理接起来。<br>全部内容已存在手机里，不用联网。</p>
+  </div>
+  <div class="tiles">
+    <button class="tile t-fire" data-obj="fire">
+      <svg class="deco" width="34" height="46" viewBox="0 0 34 46"><path d="M17 2c6 10 15 14 15 25a15 15 0 0 1-30 0C2 18 11 14 17 2z" fill="#F2761B" opacity=".75"/><path d="M17 20c3 5 7 7 7 12a7 7 0 0 1-14 0c0-5 4-7 7-12z" fill="#FFC93C"/></svg>
+      <span class="big">火</span>
+      <span class="sm">5 张卡片 · 燃烧三要素 · 焰色 · 光谱 · 灭火</span>
+    </button>
+    <button class="tile t-water" data-obj="water">
+      <svg class="deco" width="34" height="46" viewBox="0 0 34 46"><path d="M17 3C9 14 4 21 4 28a13 13 0 0 0 26 0c0-7-5-14-13-25z" fill="#3E8ED0" opacity=".8"/><path d="M17 18c-4 6-6 8-6 11a6 6 0 0 0 12 0c0-3-2-5-6-11z" fill="#7FD8F0"/></svg>
+      <span class="big">水</span>
+      <span class="sm">6 张卡片 · 三态 · 冰为什么浮 · 分子 · 发电</span>
+    </button>
+  </div>
+  <div class="homefoot">测试版 v0.1 · 手动选择对象，摄像头识别在下一版</div>
+</div>
+
+<!-- ================= DECK ================= -->
+<div class="view" id="deck" aria-hidden="true">
+  <div class="dbar">
+    <span class="t" id="dtitle">火</span><span class="c" id="counter">1 / 5</span>
+    <button class="back" id="back">‹ 返回</button>
+  </div>
+
+  <!-- ---------- FIRE ---------- -->
+  <div class="track" id="track-fire">
+    <section class="card">
+      <h3>火需要三样东西</h3><p class="sub">点掉任意一个，看火会怎样</p>
+      <div class="minifire" id="mini"><div class="mf"></div></div>
+      <div class="tri">
+        <button class="cond" data-k="fuel"><b>可燃物</b><em>木柴 · 蜡 · 燃气</em></button>
+        <button class="cond" data-k="o2"><b>氧气</b><em>空气里约 21%</em></button>
+        <button class="cond" data-k="heat"><b>温度</b><em>达到着火点</em></button>
+      </div>
+      <p class="verdict" id="verdict">三个都在，火就一直烧。</p>
+      <p class="en">灭火，就是想办法拿掉其中一个 —— 最后一张卡片里有四个真实场景。</p>
+    </section>
+
+    <section class="card">
+      <h3>火焰的颜色</h3><p class="sub">黄色和蓝色，不是同一回事</p>
+      <div class="toggle">
+        <button id="tg-candle" class="on">蜡烛 · 黄</button><button id="tg-gas">燃气灶 · 蓝</button>
+      </div>
+      <div class="zones">
+        <div class="candle" id="candle">
+          <div class="zone z-out" data-z="out"></div><div class="zone z-in" data-z="in"></div>
+          <div class="zone z-core" data-z="core"></div><div class="wick"></div>
+        </div>
+        <div class="zinfo" id="zinfo">点火焰的不同部位</div>
+      </div>
+      <p class="why" id="why">蜡烛的黄光来自被烧红的炭黑颗粒 —— 和烧红的铁一样，颜色跟温度有关。</p>
+      <p class="en">先问学生：燃气灶的火是蓝的，它比蜡烛的黄火更烫还是更凉？</p>
+    </section>
+
+    <section class="card">
+      <h3>火焰里有什么</h3><p class="sub">撒一点东西进去，火会告诉你</p>
+      <div class="spec" id="spec"><div class="mask" id="mask"></div></div>
+      <div class="scale"><span>400nm 紫</span><span>550nm 绿</span><span>700nm 红</span></div>
+      <div class="elrow" id="elrow">
+        <button data-el="Na">食盐 Na</button><button data-el="K">草木灰 K</button>
+        <button data-el="Cu">铜丝 Cu</button><button data-el="H">氢 H</button>
+      </div>
+      <p id="specinfo">每种元素只发出属于它自己的几条光 —— 像指纹一样。</p>
+      <p class="en">天文学家用的是一模一样的办法：把星光摊开，看里面有哪几条线。</p>
+    </section>
+
+    <section class="card">
+      <h3>从灶台到太阳</h3><p class="sub">同一个办法，能用到多远</p>
+      <div class="arc">
+        <div class="step"><b>灶台的火</b><span>撒一把盐，火焰变黄</span></div>
+        <div class="step"><b>焰色反应</b><span>不同的盐，不同的颜色</span></div>
+        <div class="step"><b>分光镜</b><span>把光摊开，看见一条条亮线</span></div>
+        <div class="step"><b>恒星的光</b><span>星光摊开，也有同样的线</span></div>
+        <div class="step"><b>太阳里有什么</b><span>1868 年先在太阳光里发现了氦，27 年后才在地球上找到它</span></div>
+      </div>
+      <div class="aside"><b>延伸：人为什么拜火</b><br>从拜火教到灶王爷，火被当作神。在能生火之前，这是唯一能主动制造的光和热。</div>
+    </section>
+
+    <section class="card">
+      <h3>把火灭掉</h3><p class="sub">每一种灭火方法，都是在拿掉三要素里的一个</p>
+      <div class="cases" id="fcases">
+        <button data-c="oil">厨房油锅着火</button><button data-c="elec">电器 / 插座着火</button>
+        <button data-c="wood">院子里柴堆着火</button><button data-c="cloth">身上衣服着火</button>
+      </div>
+      <div class="fix" id="ffix">选一个场景。<br><span class="tag">提示：先想清楚要拿掉哪一个</span></div>
+      <p class="en" style="margin-top:13px">火小才自己灭；火已经比人高，唯一正确的做法是离开并叫人。</p>
+    </section>
+  </div>
+
+  <!-- ---------- WATER ---------- -->
+  <div class="track" id="track-water" style="display:none">
+    <section class="card">
+      <h3>同样的分子，三种样子</h3><p class="sub">拖动温度，看分子在做什么</p>
+      <canvas id="sim" width="640" height="320"></canvas>
+      <input type="range" class="slider" id="temp" min="-40" max="140" value="25" step="1" aria-label="温度">
+      <div class="treadout"><span id="tstate">液态 · 水</span><b id="tval">25 ℃</b></div>
+      <p id="c1text">分子挨在一起，但能互相滑动 —— 所以水能倒、能流、能装进任何形状的碗。</p>
+      <p class="en">冰、水、水蒸气是同一种分子 H₂O。变的不是分子，是它们之间的距离和运动。</p>
+    </section>
+
+    <section class="card">
+      <h3>冰为什么浮在水上</h3><p class="sub">几乎所有东西，固体都比液体重</p>
+      <div class="packs">
+        <div class="pack hi" id="p-water">
+          <svg width="76" height="60" viewBox="0 0 72 58"><g fill="#7FD8F0">
+            <circle cx="14" cy="12" r="5"/><circle cx="32" cy="16" r="5"/><circle cx="50" cy="11" r="5"/>
+            <circle cx="22" cy="28" r="5"/><circle cx="41" cy="31" r="5"/><circle cx="58" cy="25" r="5"/>
+            <circle cx="13" cy="44" r="5"/><circle cx="31" cy="46" r="5"/><circle cx="52" cy="43" r="5"/>
+          </g></svg><b>液态水</b><em>挤在一起 · 1.00</em></div>
+        <div class="pack" id="p-ice">
+          <svg width="76" height="60" viewBox="0 0 72 58">
+            <g fill="none" stroke="#3E8ED0" stroke-width="1.2"><path d="M20 8 L36 17 L52 8 M20 8 L20 26
+              M52 8 L52 26 M36 17 L36 35 M20 26 L36 35 L52 26 M20 26 L6 34 M52 26 L66 34
+              M36 35 L36 51 M20 44 L36 51 L52 44"/></g><g fill="#7FD8F0">
+            <circle cx="20" cy="8" r="4"/><circle cx="36" cy="17" r="4"/><circle cx="52" cy="8" r="4"/>
+            <circle cx="20" cy="26" r="4"/><circle cx="52" cy="26" r="4"/><circle cx="36" cy="35" r="4"/>
+            <circle cx="20" cy="44" r="4"/><circle cx="52" cy="44" r="4"/><circle cx="36" cy="51" r="4"/>
+          </g></svg><b>冰</b><em>撑开的骨架 · 0.92</em></div>
+      </div>
+      <p class="why">结冰时水分子不是挤得更紧，而是手拉手撑出一个有洞的六角骨架。
+        骨架里有空隙，同样多的水结成冰体积大了约 9% —— 变轻了，就浮起来。</p>
+      <p>还有更怪的：水在 4 ℃ 时最重。冬天湖里 4 ℃ 的水沉到底、冰浮在面上，
+        湖底不会冻实 —— 鱼才活得过冬天。</p>
+      <p class="en">先问："冰放进水里会沉还是会浮？为什么？" 再翻这一页。</p>
+    </section>
+
+    <section class="card">
+      <h3>水分子是弯的</h3><p class="sub">如果它是直的，盐就不会溶</p>
+      <div class="toggle">
+        <button id="tg-bent" class="on">真实：弯的 104.5°</button><button id="tg-lin">假设：直的 180°</button>
+      </div>
+      <div class="molbox">
+        <svg width="124" height="106" viewBox="0 0 112 96">
+          <line id="b1" x1="56" y1="52" x2="26" y2="26" stroke="#5C6E84" stroke-width="5"/>
+          <line id="b2" x1="56" y1="52" x2="86" y2="26" stroke="#5C6E84" stroke-width="5"/>
+          <circle cx="56" cy="52" r="17" fill="#E8604C"/>
+          <circle id="h1" cx="26" cy="26" r="10" fill="#EDF3F9"/>
+          <circle id="h2" cx="86" cy="26" r="10" fill="#EDF3F9"/>
+          <text x="56" y="57" font-size="13" fill="#fff" text-anchor="middle" font-family="Georgia">O</text>
+          <text id="chg" x="56" y="90" font-size="11" fill="#7FD8F0" text-anchor="middle">一头正 · 一头负</text>
+        </svg>
+        <div class="molinfo" id="molinfo">氧把电子拉过去一点，氧那头带负电、两个氢那头带正电 —— 整个分子像一块小磁铁。</div>
+      </div>
+      <p class="why" id="c3why">把盐丢进水里，带负电的那头围住 Na⁺，带正电的那头围住 Cl⁻，
+        把晶格一颗一颗拆下来 —— 这就是"溶解"。</p>
+    </section>
+
+    <section class="card">
+      <h3>从一碗水到另一颗星球</h3><p class="sub">同一件事，放大很多很多倍</p>
+      <div class="arc">
+        <div class="step"><b>锅里的水开了</b><span>水变成看不见的水蒸气跑掉</span></div>
+        <div class="step"><b>天上的云</b><span>水蒸气遇冷又变回小水滴，聚成云</span></div>
+        <div class="step"><b>下雨、汇成河</b><span>同样一批水分子，转了一圈又回来</span></div>
+        <div class="step"><b>地球为什么有液态水</b><span>离太阳不远不近，温度刚好在 0–100 ℃ 这段窄窄的区间</span></div>
+        <div class="step"><b>火星上找水</b><span>找水，其实是在找"有没有可能有生命"</span></div>
+      </div>
+      <div class="aside"><b>一个能记一辈子的数</b><br>你今天喝下去的水，曾经在云里、在河里、在别的生物身体里待过。
+        地球上的水总量几乎没变过 —— 它只是一直在转圈。</div>
+    </section>
+
+    <section class="card">
+      <h3>水的用与险</h3><p class="sub">每一条都是前面几张卡片的直接后果</p>
+      <div class="cases" id="wcases">
+        <button data-c="alt">高原上饭煮不熟</button><button data-c="pipe">冬天水管冻裂</button>
+        <button data-c="oil">油锅着火能泼水吗</button><button data-c="ice">河面的冰能走吗</button>
+      </div>
+      <div class="fix" id="wfix">选一个场景。<br><span class="tag">每个答案都指回前面某一张卡片</span></div>
+      <p class="en" style="margin-top:13px">第三条在"火"那一组里也出现过 —— 两个对象在这里连上了。</p>
+    </section>
+
+    <section class="card">
+      <h3>水怎么变成电</h3><p class="sub">换一个能量来源，看哪几步被跳过了</p>
+      <div class="sources" id="sources">
+        <button data-s="coal" class="on">火电</button><button data-s="nuke">核电</button>
+        <button data-s="hydro">水电</button><button data-s="wind">风电</button><button data-s="pv">光伏</button>
+      </div>
+      <div class="flow" id="flow">
+        <div class="stage2" data-k="src"><b id="f-src">烧煤</b><span id="f-srcx">把煤里的化学能变成热</span></div>
+        <div class="stage2" data-k="boil"><b>把水烧开</b><span>水吸热，变成高温高压的蒸汽</span></div>
+        <div class="stage2" data-k="steam"><b>蒸汽膨胀</b><span>体积涨到约 1700 倍，猛地冲出去</span></div>
+        <div class="stage2" data-k="turb"><b>推动涡轮</b><span id="f-turb">蒸汽推着叶片高速旋转</span></div>
+        <div class="stage2" data-k="gen"><b>发电机</b><span>线圈在磁场里转，导线里就有了电流</span></div>
+        <div class="stage2" data-k="grid"><b>电</b><span>沿着电线，进到你家的灯泡里</span></div>
+      </div>
+      <p class="punch" id="f-punch">全世界一半以上的电，来路都是这一条：想办法把水烧开，让蒸汽推着一个东西转起来。</p>
+      <p class="en">冷却塔上冒的"白烟"不是烟，是水蒸气遇冷凝成的小水滴。</p>
+      <p class="en" style="margin-top:8px">动手：一个小水轮加一个自行车车灯的发电机，就能点亮一颗 LED。</p>
+    </section>
+  </div>
+
+  <div class="dots" id="dots"><button class="nav" id="next">下一张 ›</button></div>
+</div>
+
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const DECKS={fire:{n:5,title:'火'},water:{n:6,title:'水'}};
+let obj='fire', idx=0;
+
+/* ---------- navigation ---------- */
+function renderDots(){
+  const d=$('dots'); d.querySelectorAll('i').forEach(x=>x.remove());
+  const n=DECKS[obj].n, frag=document.createDocumentFragment();
+  for(let i=0;i<n;i++){const el=document.createElement('i');
+    if(i===idx)el.className='on'; el.onclick=()=>goTo(i); frag.appendChild(el)}
+  d.insertBefore(frag,$('next'));
+}
+function goTo(i,instant){
+  const n=DECKS[obj].n; idx=(i+n)%n;
+  const tr=$('track-'+obj);
+  if(instant)tr.classList.add('nt');
+  tr.style.transform=`translateX(${-idx*100}%)`;
+  if(instant)requestAnimationFrame(()=>tr.classList.remove('nt'));
+  $('counter').textContent=(idx+1)+' / '+n;
+  $('next').textContent=idx===n-1?'回到第一张':'下一张 ›';
+  renderDots();
+}
+function openDeck(o){
+  obj=o; idx=0;
+  document.body.classList.toggle('water',o==='water');
+  $('track-fire').style.display = o==='fire'?'flex':'none';
+  $('track-water').style.display= o==='water'?'flex':'none';
+  $('dtitle').textContent=DECKS[o].title;
+  goTo(0,true);
+  $('deck').classList.add('open'); $('deck').setAttribute('aria-hidden','false');
+  history.pushState({deck:1},'');
+  simOn = (o==='water');
+}
+function closeDeck(){
+  $('deck').classList.remove('open'); $('deck').setAttribute('aria-hidden','true');
+  simOn=false;
+}
+document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>openDeck(t.dataset.obj));
+$('back').onclick=()=>history.back();
+$('next').onclick=()=>goTo(idx+1);
+window.onpopstate=()=>closeDeck();
+
+/* swipe */
+let sx=0,sy=0,sw=false;
+$('deck').addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;sw=true},{passive:true});
+$('deck').addEventListener('touchend',e=>{
+  if(!sw)return; sw=false;
+  const dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+  if(Math.abs(dx)>52&&Math.abs(dx)>Math.abs(dy)*1.6) goTo(idx+(dx<0?1:-1));
+},{passive:true});
+
+/* ---------- fire 1 ---------- */
+const st={fuel:true,o2:true,heat:true};
+const SAY={
+  fuel:'柴烧完了，火就灭了。<br>灭火方式：把可燃物移开 —— 山火里的隔离带就是这么做的。',
+  o2:'盖上盖子，火几秒就灭。<br>灭火方式：隔绝氧气 —— 锅里着火盖锅盖，沙土盖火堆。',
+  heat:'温度降到着火点以下，火烧不起来。<br>灭火方式：降温 —— 水灭火主要靠这个，不是靠"淹"。'};
+document.querySelectorAll('.cond').forEach(b=>b.onclick=()=>{
+  const k=b.dataset.k; st[k]=!st[k]; b.classList.toggle('off',!st[k]);
+  const off=Object.keys(st).filter(x=>!st[x]);
+  $('mini').classList.toggle('dead',off.length>0);
+  $('verdict').innerHTML = off.length===0?'三个都在，火就一直烧。'
+    : off.length===1?SAY[off[0]]:'少了任何一个，火都烧不起来 —— 三个缺一不可。';
+});
+
+/* ---------- fire 2 ---------- */
+const Z={candle:{
+    out:['外焰 约 1400℃','氧气最充足，烧得最完全，温度最高。加热要用这一层。'],
+    in:['内焰 约 1000℃','碳颗粒被烧到发光，黄色就是从这里来的 —— 也是蜡烛会冒黑烟的原因。'],
+    core:['焰心 约 600℃','还没烧起来的蜡蒸气，最凉。把火柴横插进去，中间那段不会焦。']},
+  gas:{
+    out:['外焰 约 1500℃','燃气和氧气混得均匀，烧得干净，几乎不发黄光。'],
+    in:['内焰 约 1300℃','蓝绿色来自 CH、C₂ 这些中间产物发光 —— 是化学反应在发光，不是烧红了。'],
+    core:['焰心 约 300℃','还没点着的燃气，温度最低。']}};
+const WHY={candle:'蜡烛的黄光来自被烧红的炭黑颗粒 —— 和烧红的铁一样，颜色跟温度有关。',
+  gas:'燃气灶的蓝光不是"烧红"，是分子发光。<b>它比黄色的蜡烛火更烫</b> —— "红黄蓝"的冷暖直觉在这里是反的。'};
+let mode='candle', zsel=null;
+function paint(){
+  const c=$('candle'), y=mode==='candle';
+  c.querySelector('.z-out').style.background=y?'rgba(242,118,27,.42)':'rgba(79,184,232,.30)';
+  c.querySelector('.z-in').style.background =y?'rgba(255,201,60,.85)':'rgba(79,184,232,.85)';
+  c.querySelector('.z-core').style.background=y?'rgba(90,110,150,.9)':'rgba(60,80,120,.9)';
+  $('why').innerHTML=WHY[mode];
+  if(zsel){const d=Z[mode][zsel]; $('zinfo').innerHTML='<b>'+d[0]+'</b><br>'+d[1]}
+}
+document.querySelectorAll('.zone').forEach(z=>z.onclick=()=>{
+  document.querySelectorAll('.zone').forEach(x=>x.classList.remove('sel'));
+  z.classList.add('sel'); zsel=z.dataset.z; paint();
+});
+$('tg-candle').onclick=()=>{mode='candle';$('tg-candle').classList.add('on');$('tg-gas').classList.remove('on');paint()};
+$('tg-gas').onclick=()=>{mode='gas';$('tg-gas').classList.add('on');$('tg-candle').classList.remove('on');paint()};
+paint();
+
+/* ---------- fire 3 ---------- */
+const LINES={
+  Na:{nm:[589,590],txt:'钠只在 589nm 发出一条很强的黄线。撒一点盐进火里，整团火变黄 —— 路灯、烟花的黄都是它。'},
+  K:{nm:[404,766,769],txt:'钾在两头发光：紫的 404nm 和红的 766nm，混起来是淡紫色。草木灰里有钾。'},
+  Cu:{nm:[510,515,522,578],txt:'铜有一簇绿线。烟花里的绿色，靠的就是铜。'},
+  H:{nm:[434,486,656],txt:'氢只有三条可见线：红 656、青 486、蓝 434。恒星光谱里最先被认出来的就是它们。'}};
+const spec=$('spec');
+Object.values(LINES).flatMap(v=>v.nm).forEach(nm=>{
+  const d=document.createElement('div'); d.className='line'; d.dataset.nm=nm;
+  d.style.left=((nm-380)/320*100)+'%'; spec.appendChild(d);
+});
+document.querySelectorAll('#elrow button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#elrow button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const d=LINES[b.dataset.el]; $('mask').style.opacity=.9;
+  document.querySelectorAll('.line').forEach(l=>l.classList.toggle('on',d.nm.includes(+l.dataset.nm)));
+  $('specinfo').textContent=d.txt;
+});
+
+/* ---------- fire 5 ---------- */
+const FC={
+  oil:{do:'盖锅盖，或把切好的青菜整盘倒进去，然后关火。',
+    dont:'千万不要泼水 —— 水一进热油会瞬间变成蒸汽，把燃着的油炸得满屋都是。',tag:'拿掉的是：氧气'},
+  elec:{do:'先拔插头或拉总闸，再用干粉灭火器或厚棉被压上去。',
+    dont:'断电之前不要泼水 —— 水会导电，人会被电到。',tag:'拿掉的是：可燃物（断掉电源）'},
+  wood:{do:'用水浇，或用沙土铲上去盖住。水在这里是对的。',
+    dont:'不要只浇表面 —— 里面还在烧，温度没降下来会复燃。',tag:'拿掉的是：温度／氧气'},
+  cloth:{do:'停下、躺倒、来回打滚，或用厚衣服裹住压灭。',
+    dont:'不要跑 —— 跑起来相当于给火扇风，氧气越送越多。',tag:'拿掉的是：氧气'}};
+function wire(boxId,fixId,DATA){
+  document.querySelectorAll('#'+boxId+' button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#'+boxId+' button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); const c=DATA[b.dataset.c];
+    $(fixId).innerHTML='<span class="do">'+c.do+'</span><span class="dont">'+c.dont+
+      '</span><span class="tag">'+c.tag+'</span>';
+  });
+}
+wire('fcases','ffix',FC);
+
+/* ---------- water 1: sim ---------- */
+const cv=$('sim'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height,P=[];
+for(let i=0;i<48;i++){const col=i%8,row=(i/8)|0;
+  P.push({hx:76+col*70+(row%2)*35,hy:48+row*50,x:0,y:0,vx:0,vy:0})}
+P.forEach(p=>{p.x=p.hx;p.y=p.hy});
+let T=25, simOn=false;
+const phase=t=>t<0?'ice':t<100?'water':'vapor';
+function frame(){
+  requestAnimationFrame(frame);
+  if(!simOn)return;
+  const ph=phase(T);
+  P.forEach(p=>{
+    if(ph==='ice'){p.vx+=(p.hx-p.x)*.05;p.vy+=(p.hy-p.y)*.05;
+      p.vx=p.vx*.82+(Math.random()-.5)*.25;p.vy=p.vy*.82+(Math.random()-.5)*.25}
+    else if(ph==='water'){const k=.004+(100-T)/100*.004;
+      p.vx+=(p.hx-p.x)*k;p.vy+=(p.hy-p.y)*k;
+      p.vx=p.vx*.94+(Math.random()-.5)*1.5;p.vy=p.vy*.94+(Math.random()-.5)*1.5}
+    else{p.vx+=(Math.random()-.5)*1.6;p.vy+=(Math.random()-.5)*1.6;
+      p.vx=Math.max(-7,Math.min(7,p.vx));p.vy=Math.max(-7,Math.min(7,p.vy))}
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.x<13){p.x=13;p.vx=Math.abs(p.vx)} if(p.x>W-13){p.x=W-13;p.vx=-Math.abs(p.vx)}
+    if(p.y<13){p.y=13;p.vy=Math.abs(p.vy)} if(p.y>H-13){p.y=H-13;p.vy=-Math.abs(p.vy)}
+  });
+  ctx.clearRect(0,0,W,H);
+  if(ph==='ice'){ctx.strokeStyle='rgba(62,142,208,.45)';ctx.lineWidth=1.6;
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+      if(Math.hypot(P[i].x-P[j].x,P[i].y-P[j].y)<76){
+        ctx.beginPath();ctx.moveTo(P[i].x,P[i].y);ctx.lineTo(P[j].x,P[j].y);ctx.stroke()}}}
+  ctx.fillStyle=ph==='vapor'?'rgba(180,215,235,.75)':'#7FD8F0';
+  P.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,ph==='vapor'?5:9,0,6.3);ctx.fill()});
+}
+frame();
+const TXT={ice:['固态 · 冰','分子被锁在固定位置上，只能原地抖。所以冰有自己的形状，不会流。'],
+  water:['液态 · 水','分子挨在一起，但能互相滑动 —— 所以水能倒、能流、能装进任何形状的碗。'],
+  vapor:['气态 · 水蒸气','分子四散飞开，彼此离得很远。同样多的水，变成蒸气后体积大了约 1700 倍。']};
+$('temp').oninput=function(){T=+this.value;const d=TXT[phase(T)];
+  $('tval').textContent=T+' ℃'; $('tstate').textContent=d[0]; $('c1text').textContent=d[1]};
+
+/* ---------- water 2 ---------- */
+['p-water','p-ice'].forEach(id=>$(id).onclick=()=>{
+  $('p-water').classList.toggle('hi',id==='p-water');
+  $('p-ice').classList.toggle('hi',id==='p-ice')});
+
+/* ---------- water 3 ---------- */
+const BENT={info:'氧把电子拉过去一点，氧那头带负电、两个氢那头带正电 —— 整个分子像一块小磁铁。',
+  why:'把盐丢进水里，带负电的那头围住 Na⁺，带正电的那头围住 Cl⁻，把晶格一颗一颗拆下来 —— 这就是"溶解"。',
+  chg:'一头正 · 一头负'};
+const LIN={info:'如果两个氢正好在两边，两边的拉力互相抵消，分子就不带"方向"了。',
+  why:'不带方向，就抓不住 Na⁺ 和 Cl⁻ —— 盐不会溶，海水会是淡的。二氧化碳就是这种直的分子，所以它几乎不溶于水。',
+  chg:'两边抵消 · 不带电性'};
+function setMol(bent){
+  const put=(id,x,y)=>{const e=$(id);
+    if(e.tagName==='line'){e.setAttribute('x2',x);e.setAttribute('y2',y)}
+    else{e.setAttribute('cx',x);e.setAttribute('cy',y)}};
+  put('b1',bent?26:8,bent?26:52); put('b2',bent?86:104,bent?26:52);
+  put('h1',bent?26:8,bent?26:52); put('h2',bent?86:104,bent?26:52);
+  const d=bent?BENT:LIN;
+  $('molinfo').textContent=d.info; $('c3why').textContent=d.why; $('chg').textContent=d.chg;
+  $('tg-bent').classList.toggle('on',bent); $('tg-lin').classList.toggle('on',!bent);
+}
+$('tg-bent').onclick=()=>setMol(true); $('tg-lin').onclick=()=>setMol(false);
+
+/* ---------- water 5 ---------- */
+const WC={
+  alt:{do:'海拔越高气压越低，水不到 100 ℃ 就开了。拉萨约 3650 米，水大概 87 ℃ 就沸腾。',
+    dont:'不是"火不够大"。再加柴，开着的水也升不上去 —— 要用高压锅，把气压压回来。',
+    tag:'回到第 1 张：沸腾不是温度到了，是压力扛不住了'},
+  pipe:{do:'夜里让水龙头滴一点点水，或给管子裹上布、草绳保温。',
+    dont:'不要等冻上了再用火烤 —— 管子里已经胀裂，一化开就漏。',tag:'回到第 2 张：水结冰体积要大 9%'},
+  oil:{do:'盖锅盖，关火。',
+    dont:'绝对不能泼水。水一进热油立刻变成 1700 倍体积的蒸气，把燃着的油炸得满屋都是。',
+    tag:'回到第 1 张：气态体积约是液态的 1700 倍'},
+  ice:{do:'不能走。看起来结实的河面，下面可能是流动的水，冰薄得多。',
+    dont:'不要因为"冰浮在水上"就以为它结实 —— 它只是比水轻 8%，不是比水硬。',
+    tag:'回到第 2 张：冰只比水轻一点点'}};
+wire('wcases','wfix',WC);
+
+/* ---------- water 6 ---------- */
+const SRC={
+  coal:{name:'烧煤',x:'把煤里的化学能变成热',skip:[],turb:'蒸汽推着叶片高速旋转',
+    punch:'全世界一半以上的电，来路都是这一条：想办法把水烧开，让蒸汽推着一个东西转起来。'},
+  nuke:{name:'核裂变',x:'铀原子裂开的时候放出大量的热',skip:[],turb:'蒸汽推着叶片高速旋转',
+    punch:'核电站听起来很高科技，可它做的事和火电一模一样 —— 烧开水。只是换了一种"柴"，后面四步一点没变。'},
+  hydro:{name:'水往低处流',x:'高处的水落下来，势能变成动能',skip:['boil','steam'],
+    turb:'落下来的水直接推着叶片转',
+    punch:'水电根本不烧水，它把中间两步整个跳过去 —— 所以效率高得多。火电大约只有 40% 的燃料最后变成了电。'},
+  wind:{name:'风',x:'流动的空气带着动能',skip:['boil','steam'],turb:'风直接推着叶片转',
+    punch:'风电和水电是同一个套路：找一样本来就在动的东西，让它去推涡轮，省掉烧水这一大步。'},
+  pv:{name:'阳光',x:'光子直接把电子撞出来',skip:['boil','steam','turb','gen'],turb:'——',
+    punch:'光伏是这里面唯一不靠"转"的。没有涡轮，没有发电机，也不需要水 —— 它是一百多年来真正不一样的那一个。'}};
+document.querySelectorAll('#sources button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#sources button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); const d=SRC[b.dataset.s];
+  $('f-src').textContent=d.name; $('f-srcx').textContent=d.x;
+  $('f-turb').textContent=d.turb; $('f-punch').textContent=d.punch;
+  document.querySelectorAll('.stage2').forEach(s=>s.classList.toggle('skip',d.skip.includes(s.dataset.k)));
+});
+
+/* ---------- service worker ---------- */
+if('serviceWorker' in navigator)
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
